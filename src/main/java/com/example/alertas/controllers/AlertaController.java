@@ -2,7 +2,11 @@ package com.example.alertas.controllers;
 
 import com.example.alertas.dto.AlertaRequest;
 import com.example.alertas.dto.AlertaResponse;
+import com.example.alertas.dto.EstadoRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -11,7 +15,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/alertas")
-// El CORS se maneja centralizado en SecurityConfig, se recomienda quitarlo de aquí
 public class AlertaController {
 
     private final RestTemplate restTemplate;
@@ -19,13 +22,12 @@ public class AlertaController {
     @Value("${ms.alertas.url}")
     private String msAlertasUrl;
 
-    public AlertaController(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public AlertaController(RestTemplateBuilder builder) {
+    this.restTemplate = builder.build();
     }
 
     @GetMapping({"", "/"})
     public ResponseEntity<List<AlertaResponse>> listar() {
-        // Redirige al microservicio interno
         AlertaResponse[] alertas =
                 restTemplate.getForObject(msAlertasUrl + "/api/alertas", AlertaResponse[].class);
         return ResponseEntity.ok(Arrays.asList(alertas));
@@ -45,12 +47,25 @@ public class AlertaController {
 
     @PatchMapping("/{id}/estado")
     public ResponseEntity<AlertaResponse> cambiarEstado(@PathVariable Long id,
-            @RequestBody String nuevoEstado) {
-        // El BFF orquesta la actualización llamando al MS interno
-        restTemplate.patchForObject(msAlertasUrl + "/api/alertas/" + id + "/estado", nuevoEstado,
-                Void.class);
-        return ResponseEntity.ok().build();
+            @RequestBody EstadoRequest request) {
+        // Al usar el RestTemplate de Spring Boot, no necesitas configuraciones extras
+        return restTemplate.exchange(msAlertasUrl + "/api/alertas/" + id + "/estado",
+                HttpMethod.PATCH, new HttpEntity<>(request), AlertaResponse.class);
     }
 
-    // PUT y DELETE se implementan siguiendo la misma lógica de redirección...
+    // BFF - AlertaController.java
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        try {
+            String url = msAlertasUrl + "/api/alertas/" + id;
+            System.out.println("BFF intentando borrar en: " + url);
+
+            restTemplate.exchange(url, HttpMethod.DELETE, null, Void.class);
+
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            System.out.println("ERROR EN BFF AL LLAMAR AL MS: " + e.getMessage());
+            throw e; // Esto disparará el 500 que ves en el log
+        }
+    }
 }

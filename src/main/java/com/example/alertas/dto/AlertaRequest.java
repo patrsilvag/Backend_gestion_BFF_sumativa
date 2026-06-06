@@ -20,6 +20,9 @@ public class AlertaRequest {
 
     @NotBlank(message = "El color de alerta es obligatorio")
     private String colorAlerta;
-
+    
+    @NotBlank(message = "Estado es obligatorio")
+    private String estado;
+    
     private String signosVitales;
 }
