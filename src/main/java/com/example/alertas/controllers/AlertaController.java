@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Arrays;
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/alertas")
 public class AlertaController {
@@ -68,4 +69,18 @@ public class AlertaController {
             throw e; // Esto disparará el 500 que ves en el log
         }
     }
+
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AlertaResponse> actualizar(@PathVariable Long id,
+            @RequestBody AlertaRequest request) {
+        // Definimos la URL del microservicio
+        String url = msAlertasUrl + "/api/alertas/" + id;
+
+        // Usamos exchange para enviar el método PUT con el cuerpo (request)
+        return restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(request), // El cuerpo de
+                                                                                     // la petición
+                AlertaResponse.class);
+    }
+
 }
